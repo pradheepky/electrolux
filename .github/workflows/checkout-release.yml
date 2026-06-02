@@ -1,1 +1,54 @@
+# =============================================================
+# Checkout 15 Repos from electoflux org based on a manifest
+# =============================================================
 
+name: Checkout Release Repos
+
+on:
+  workflow_dispatch:                 # manual trigger from GitHub UI
+
+env:
+  ORG: electrolux                    # GitHub organization
+
+jobs:
+  # ----------------------------------------------------------
+  # JOB 1: Read manifest → expose matrix + release version
+  # ----------------------------------------------------------
+  load-manifest:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix:  ${{ steps.set.outputs.matrix }}
+      release: ${{ steps.set.outputs.release }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: set
+        run: |
+          echo "matrix=$(jq -c '{include: .repos}' release-manifest.json)" >> $GITHUB_OUTPUT
+          echo "release=$(jq -r .release release-manifest.json)" >> $GITHUB_OUTPUT
+
+  # ------------------------------------------------------
+  # JOB 2: Checkout each repo at its own ref, in parallel
+  # ------------------------------------------------------
+  checkout-repos:
+    needs: load-manifest
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false               # one failure won't cancel others
+      max-parallel: 15
+      matrix: ${{ fromJson(needs.load-manifest.outputs.matrix) }}
+    steps:
+      - name: Checkout ${{ matrix.name }} @ ${{ matrix.ref }}
+        uses: actions/checkout@v4
+        with:
+          repository: https://github.com/${{ env.ORG }}/${{ matrix.name }}
+          ref: ${{ matrix.ref }}
+          path: ${{ matrix.name }}
+          token: ${{ secrets.RELEASE_PAT }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: repo-${{ matrix.name }}
+          path: ${{ matrix.name }}
+          retention-days: 14
