@@ -1,20 +1,20 @@
 {
   "release": "2026.06.01",
   "repos": [
-    { "name": "repository-a",  "ref": "v1.8.2" },
-    { "name": "repository-b",  "ref": "v2.1.0" },
-    { "name": "repository-c",  "ref": "v3.0.4" },
-    { "name": "repository-d",  "ref": "v1.0.7" },
-    { "name": "repository-e",  "ref": "v4.2.1" },
-    { "name": "repository-f",  "ref": "v2.5.0" },
-    { "name": "repository-g",  "ref": "v1.3.9" },
-    { "name": "repository-h",  "ref": "v2.0.0" },
-    { "name": "repository-i",  "ref": "v1.1.4" },
-    { "name": "repository-j",  "ref": "v3.7.2" },
-    { "name": "repository-k",  "ref": "v1.9.0" },
-    { "name": "repository-l",  "ref": "v2.2.3" },
-    { "name": "repository-m",  "ref": "v1.4.6" },
-    { "name": "repository-n",  "ref": "v2.8.1" },
-    { "name": "repository-o",  "ref": "v1.0.0" }
+    { "name": "repository-a",  "ref": "release/2026.06.01" },
+    { "name": "repository-b",  "ref": "release/2026.06.01" },
+    { "name": "repository-c",  "ref": "release/2026.06.01" },
+    { "name": "repository-d",  "ref": "release/2026.06.01" },
+    { "name": "repository-e",  "ref": "release/2026.06.01" },
+    { "name": "repository-f",  "ref": "release/2026.06.01" },
+    { "name": "repository-g",  "ref": "release/2026.06.01" },
+    { "name": "repository-h",  "ref": "release/2026.06.01" },
+    { "name": "repository-i",  "ref": "release/2026.06.01" },
+    { "name": "repository-j",  "ref": "release/2026.06.01" },
+    { "name": "repository-k",  "ref": "release/2026.06.01" },
+    { "name": "repository-l",  "ref": "release/2026.06.01" },
+    { "name": "repository-m",  "ref": "release/2026.06.01" },
+    { "name": "repository-n",  "ref": "release/2026.06.01" },
+    { "name": "repository-o",  "ref": "release/2026.06.01" }
   ]
 }
