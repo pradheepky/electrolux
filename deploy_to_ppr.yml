@@ -1,0 +1,85 @@
+# ==========================================================================
+# Azure DevOps CI/CD Pipeline
+# Goal: Build once, deploy the SAME artifact to Test and Staging environment
+# Trigger: Any push to the 'main' branch
+# ==========================================================================
+
+# ---- Trigger ----
+# Pipeline runs automatically on every Push + PR 
+pr:
+  - main
+
+stages:
+
+# -------------------------------------------------------------
+# STAGE 1: BUILD
+# Compiles the app and publishes one shared artifact ('bazel_out')
+# that both PPR environments will reuse.
+# -------------------------------------------------------------
+- stage: Build
+  jobs:
+  - job: BuildApp
+    pool:
+      vmImage: ubuntu-latest         # Microsoft-hosted Linux agent
+    steps:
+    # Run the build script which compiles + packages the app
+    - script: ./build.sh
+      displayName: Build application
+
+    # Publish build output as an artifact named 'bazel_out'
+    # so later stages can download and deploy it.
+    - publish: $(Build.ArtifactStagingDirectory)
+      artifact: bazel_out
+
+# -------------------------------------------------------------
+# STAGE 2: DEPLOY TO Test (Pre-production release)
+# -------------------------------------------------------------
+- stage: Deploy_Test_Env
+  dependsOn: Build                   
+  condition: succeeded()             
+  jobs:
+  - deployment: Test                 
+    environment: test               
+    pool:
+      vmImage: ubuntu-latest
+    strategy:
+      runOnce:                      
+        deploy:
+          steps:
+          # Download the artifact built earlier
+          - download: current
+            artifact: bazel_out
+
+          - script: ./deploy.sh --env test
+            displayName: Deploy to test env
+
+          # Health check — fails the stage if app is not responding
+          - script: curl --fail https://testenv.appdeployment.com/health
+            displayName: Health check
+
+# -------------------------------------------------------------
+# STAGE 3: DEPLOY TO Staging
+# -------------------------------------------------------------
+- stage: Deploy_Staging_Env
+  dependsOn: Build                   
+  condition: succeeded()             
+  jobs:
+  - deployment: Staging
+    environment: staging                
+    pool:
+      vmImage: ubuntu-latest
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          # Download the SAME artifact used by Test env (no rebuild)
+          - download: current
+            artifact: bazel_out
+
+          # Run the deployment script targeting PPR2
+          - script: ./deploy.sh --env staging
+            displayName: Deploy to staging env
+
+          # Health check for Staging
+          - script: curl --fail https://staging.appdeployment.com/health
+            displayName: Health check
