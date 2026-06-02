@@ -1,1 +1,122 @@
+# =============================================================
+# Azure DevOps CI/CD Pipeline
+# Flow: Commit → Pre-Flight → Build → Test → PPR → PROD
+# =============================================================
 
+trigger:
+  - main
+
+pr:
+  - main
+
+variables:
+  artifact: bazel_out
+
+stages:
+
+# -------------------------------------------------------------
+# PRE-FLIGHT — Lint + Format
+# -------------------------------------------------------------
+- stage: PreFlight
+  displayName: Pre-Flight Checks
+  jobs:
+  - job: QualityGate
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - script: pip install ruff black
+      displayName: Install lint/format tools
+
+    - script: ruff check .
+      displayName: Lint (ruff)
+
+    - script: black --check .
+      displayName: Format check (black)
+
+# -------------------------------------------------------------
+# BUILD — Compile and publish artifact
+# -------------------------------------------------------------
+- stage: Build
+  dependsOn: PreFlight
+  condition: succeeded()
+  jobs:
+  - job: BuildApp
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - script: ./build.sh
+      displayName: Build application
+
+    - publish: $(Build.ArtifactStagingDirectory)
+      artifact: $(artifact)
+
+# -------------------------------------------------------------
+# TEST — Run all tests
+# -------------------------------------------------------------
+- stage: Test
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - job: RunTests
+    pool:
+      vmImage: ubuntu-latest
+    steps:
+    - download: current
+      artifact: $(artifact)
+
+    - script: pytest tests/
+      displayName: Run tests
+
+# -------------------------------------------------------------
+# DEPLOY PPR — Pre-prod environment
+# -------------------------------------------------------------
+- stage: Deploy_PPR
+  dependsOn: Test
+  condition: succeeded()
+  jobs:
+  - deployment: PPR
+    environment: ppr
+    pool:
+      vmImage: ubuntu-latest
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: $(artifact)
+
+          - script: ./deploy.sh --env ppr
+            displayName: Deploy
+
+          - script: curl --fail --retry 10 --retry-delay 5 https://ppr.electoflux.com/health
+            displayName: Health check
+
+# -------------------------------------------------------------
+# DEPLOY PROD — Pauses for manual approval (set in Azure DevOps UI)
+# -------------------------------------------------------------
+- stage: Deploy_PROD
+  dependsOn: Deploy_PPR
+  condition: succeeded()
+  jobs:
+  - deployment: PROD
+    environment: prod
+    pool:
+      vmImage: ubuntu-latest
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          - download: current
+            artifact: $(artifact)
+
+          - script: ./deploy.sh --env prod
+            displayName: Deploy to PROD
+
+          - script: curl --fail --retry 20 --retry-delay 5 https://prod.electoflux.com/health
+            displayName: Production health check
+
+        on:
+          failure:
+            steps:
+            - script: ./rollback.sh --env prod
+              displayName: Auto-rollback on failure
