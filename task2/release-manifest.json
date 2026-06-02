@@ -1,0 +1,20 @@
+{
+  "release": "2026.06.01",
+  "repos": [
+    { "name": "repository-a",  "tag": "v1.8.2" },
+    { "name": "repository-b",  "tag": "v2.1.0" },
+    { "name": "repository-c",  "tag": "v3.0.4" },
+    { "name": "repository-d",  "tag": "v1.0.7" },
+    { "name": "repository-e",  "tag": "v4.2.1" },
+    { "name": "repository-f",  "tag": "v2.5.0" },
+    { "name": "repository-g",  "tag": "v1.3.9" },
+    { "name": "repository-h",  "tag": "v2.0.0" },
+    { "name": "repository-i",  "tag": "v1.1.4" },
+    { "name": "repository-j",  "tag": "v3.7.2" },
+    { "name": "repository-k",  "tag": "v1.9.0" },
+    { "name": "repository-l",  "tag": "v2.2.3" },
+    { "name": "repository-m",  "tag": "v1.4.6" },
+    { "name": "repository-n",  "tag": "v2.8.1" },
+    { "name": "repository-o",  "tag": "v1.0.0" }
+  ]
+}
