@@ -1,0 +1,61 @@
+parameters:
+  - name: releaseBranch
+    type: string
+    default: 'release/2026.06'
+  - name: sourceBranch
+    type: string
+    default: 'main'
+  - name: repositories
+    type: object
+    default:
+      - service-repo-01
+      - service-repo-02
+      - service-repo-03
+      - service-repo-04
+      - service-repo-05
+      - service-repo-06
+      - service-repo-07
+      - service-repo-08
+      - service-repo-09
+      - service-repo-10
+      - service-repo-11
+      - service-repo-12
+      - service-repo-13
+      - service-repo-14
+      - service-repo-15
+
+stages:
+  - stage: Sync_Release_Branches
+    displayName: Sync release branches for all repositories
+    jobs:
+      - ${{ each repo in parameters.repositories }}:
+          - job: Sync_${{ replace(repo, '-', '_') }}
+            displayName: Sync ${{ repo }}
+            pool:
+              vmImage: 'ubuntu-latest'
+            steps:
+              - checkout: none
+              - script: |
+                  set -euo pipefail
+                  echo "Syncing ${{ repo }} from ${{ parameters.sourceBranch }} to ${{ parameters.releaseBranch }}"
+
+                  git config --global user.email "release-bot@contoso.com"
+                  git config --global user.name "release-bot"
+
+                  git clone "https://$(System.AccessToken)@dev.azure.com/your-org/your-project/_git/${{ repo }}" "${{ repo }}"
+                  cd "${{ repo }}"
+
+                  git fetch origin "${{ parameters.sourceBranch }}" "${{ parameters.releaseBranch }}" || true
+                  git checkout "${{ parameters.sourceBranch }}"
+
+                  if git show-ref --quiet "refs/remotes/origin/${{ parameters.releaseBranch }}"; then
+                    git checkout -B "${{ parameters.releaseBranch }}" "origin/${{ parameters.releaseBranch }}"
+                  else
+                    git checkout -B "${{ parameters.releaseBranch }}"
+                  fi
+
+                  git merge --no-ff "origin/${{ parameters.sourceBranch }}" -m "chore(release): sync from ${{ parameters.sourceBranch }}"
+                  git push origin "${{ parameters.releaseBranch }}"
+                displayName: Merge source into release branch
+                env:
+                  SYSTEM_ACCESSTOKEN: $(System.AccessToken)

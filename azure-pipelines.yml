@@ -1,0 +1,125 @@
+trigger:
+  branches:
+    include:
+      - main
+      - release/*
+
+pr:
+  branches:
+    include:
+      - main
+
+variables:
+  vmImage: 'ubuntu-latest'
+  artifactName: 'drop'
+  healthEndpoint: '/health'
+
+stages:
+  - stage: Build
+    displayName: Build
+    jobs:
+      - job: Build
+        pool:
+          vmImage: $(vmImage)
+        steps:
+          - checkout: self
+          - script: |
+              echo "Build step placeholder - replace with project build command"
+            displayName: Build application
+
+  - stage: Test
+    displayName: Test
+    dependsOn: Build
+    jobs:
+      - job: Test
+        pool:
+          vmImage: $(vmImage)
+        steps:
+          - checkout: self
+          - script: |
+              echo "Test step placeholder - replace with project test command"
+            displayName: Run tests
+
+  - stage: Package
+    displayName: Create Artifact
+    dependsOn: Test
+    jobs:
+      - job: Package
+        pool:
+          vmImage: $(vmImage)
+        steps:
+          - checkout: self
+          - script: |
+              mkdir -p $(Build.ArtifactStagingDirectory)
+              cp -R . $(Build.ArtifactStagingDirectory)/app
+            displayName: Prepare artifact
+          - task: PublishBuildArtifacts@1
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: '$(artifactName)'
+              publishLocation: 'Container'
+
+  - stage: Deploy_PPR1
+    displayName: Deploy to PPR1
+    dependsOn: Package
+    condition: succeeded()
+    jobs:
+      - deployment: DeployPPR1
+        displayName: PPR1 deployment
+        environment: 'PPR1'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: $(artifactName)
+                - script: |
+                    echo "Deploy artifact to PPR1"
+                  displayName: Deploy to PPR1
+                - script: |
+                    curl -f "https://ppr1.example.com$(healthEndpoint)"
+                  displayName: PPR1 health check
+
+  - stage: Deploy_PPR2
+    displayName: Deploy to PPR2
+    dependsOn: Package
+    condition: succeeded()
+    jobs:
+      - deployment: DeployPPR2
+        displayName: PPR2 deployment
+        environment: 'PPR2'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: $(artifactName)
+                - script: |
+                    echo "Deploy artifact to PPR2"
+                  displayName: Deploy to PPR2
+                - script: |
+                    curl -f "https://ppr2.example.com$(healthEndpoint)"
+                  displayName: PPR2 health check
+
+  - stage: Deploy_PROD
+    displayName: Deploy to PROD
+    dependsOn:
+      - Deploy_PPR1
+      - Deploy_PPR2
+    condition: succeeded()
+    jobs:
+      - deployment: DeployProd
+        displayName: Production deployment
+        environment: 'PROD'
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - download: current
+                  artifact: $(artifactName)
+                - script: |
+                    echo "Deploy artifact to PROD"
+                  displayName: Deploy to PROD
+                - script: |
+                    curl -f "https://prod.example.com$(healthEndpoint)"
+                  displayName: PROD health check
