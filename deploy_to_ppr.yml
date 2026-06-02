@@ -4,8 +4,9 @@
 # Trigger: Any push to the 'main' branch
 # ==========================================================================
 
-# ---- Trigger ----
 # Pipeline runs automatically on every Push + PR 
+trigger:
+  - main
 pr:
   - main
 
